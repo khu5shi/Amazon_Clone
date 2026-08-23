@@ -114,7 +114,7 @@ function ProductsContent() {
           case 'rating_desc':
             return b.rating - a.rating;
           case 'newest':
-            return b.createdAt.localeCompare(a.createdAt);
+            return (b.createdAt || '').localeCompare(a.createdAt || '');
           default:
             return 0; // featured
         }

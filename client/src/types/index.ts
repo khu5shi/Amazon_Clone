@@ -44,6 +44,8 @@ export interface Product {
   features: string[];
   specifications: Record<string, string>;
   tags: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Address {
