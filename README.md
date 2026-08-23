@@ -56,26 +56,26 @@ npm run install:all
 ```
 
 ### 2. Environment Setup
-The backend environment is configured in `server/.env`:
+Create a `.env` file in the `server/` directory (or copy from `server/.env.example`):
 ```ini
 NODE_ENV=development
 PORT=5000
 CLIENT_ORIGIN=http://localhost:3000
 MONGODB_URI=mongodb://127.0.0.1:27017/amazon_enterprise
-JWT_SECRET=super_secret_jwt_key_for_amazon_enterprise_2026
+JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRES_IN=7d
 
 # Root Admin Credentials
 ADMIN_EMAIL=admin@amazon.com
 ADMIN_PASSWORD=admin123
 
-# Gmail SMTP Configuration
+# Gmail SMTP Configuration (For 60s Email OTP)
 SMTP_SERVICE=gmail
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=465
 SMTP_SECURE=true
-SMTP_USER=khushi4608@gmail.com
-SMTP_PASS=xvct jixz qwwd whev
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_16_digit_google_app_password
 SMTP_FROM=Amazon Enterprise <no-reply@amazon-enterprise.dev>
 
 # OTP Expiration Window
