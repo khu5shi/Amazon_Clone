@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { FacetSidebar } from '../../components/filter/FacetSidebar';
 import { ProductCard } from '../../components/product/ProductCard';
 import { initialProducts, initialCategories } from '../../lib/mockData';
 import { Product } from '../../types';
-import { Filter, ArrowUpDown } from 'lucide-react';
+import { Filter, ArrowUpDown, Loader2 } from 'lucide-react';
 
-export default function ProductsPage() {
+function ProductsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -68,124 +68,118 @@ export default function ProductsPage() {
 
   // Filter & Sort Pipeline
   const filteredProducts = useMemo(() => {
-    return initialProducts.filter((product) => {
-      // Keyword match
-      if (urlKeyword) {
-        const query = urlKeyword.toLowerCase();
-        const matchesTitle = product.title.toLowerCase().includes(query);
-        const matchesBrand = product.brand.toLowerCase().includes(query);
-        const matchesTags = product.tags.some((t) => t.toLowerCase().includes(query));
-        if (!matchesTitle && !matchesBrand && !matchesTags) return false;
-      }
-
-      // Category filter
-      if (selectedCategory !== 'all' && product.categorySlug !== selectedCategory) {
-        return false;
-      }
-
-      // Brand filter
-      if (selectedBrands.length > 0 && !selectedBrands.includes(product.brand)) {
-        return false;
-      }
-
-      // Prime filter
-      if (isPrimeOnly && !product.isPrimeEligible) {
-        return false;
-      }
-
-      // Lightning deals filter
-      if (urlDeal && !product.isLightningDeal) {
-        return false;
-      }
-
-      // Rating filter
-      if (minRating !== null && product.rating < minRating) {
-        return false;
-      }
-
-      // Price filter
-      if (product.price < minPrice || product.price > maxPrice) {
-        return false;
-      }
-
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'price_asc') return a.price - b.price;
-      if (sortBy === 'price_desc') return b.price - a.price;
-      if (sortBy === 'rating') return b.rating - a.rating;
-      if (sortBy === 'newest') return b._id.localeCompare(a._id);
-      // 'featured' default: Best sellers and Amazon Choice first
-      const scoreA = (a.isBestSeller ? 2 : 0) + (a.isAmazonChoice ? 1 : 0) + a.rating;
-      const scoreB = (b.isBestSeller ? 2 : 0) + (b.isAmazonChoice ? 1 : 0) + b.rating;
-      return scoreB - scoreA;
-    });
+    return initialProducts
+      .filter((product) => {
+        // Category filter
+        if (selectedCategory !== 'all' && product.categorySlug !== selectedCategory) {
+          return false;
+        }
+        // Keyword filter
+        if (
+          urlKeyword &&
+          !product.title.toLowerCase().includes(urlKeyword.toLowerCase()) &&
+          !product.brand.toLowerCase().includes(urlKeyword.toLowerCase()) &&
+          !product.tags.some((t) => t.toLowerCase().includes(urlKeyword.toLowerCase()))
+        ) {
+          return false;
+        }
+        // Prime filter
+        if (isPrimeOnly && !product.isPrimeEligible) {
+          return false;
+        }
+        // Brand filter
+        if (selectedBrands.length > 0 && !selectedBrands.includes(product.brand)) {
+          return false;
+        }
+        // Rating filter
+        if (minRating !== null && product.rating < minRating) {
+          return false;
+        }
+        // Price filter
+        if (product.price < minPrice || product.price > maxPrice) {
+          return false;
+        }
+        // Deal filter
+        if (urlDeal && !product.isLightningDeal) {
+          return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        switch (sortBy) {
+          case 'price_asc':
+            return a.price - b.price;
+          case 'price_desc':
+            return b.price - a.price;
+          case 'rating_desc':
+            return b.rating - a.rating;
+          case 'newest':
+            return b.createdAt.localeCompare(a.createdAt);
+          default:
+            return 0; // featured
+        }
+      });
   }, [
-    urlKeyword,
     selectedCategory,
-    selectedBrands,
+    urlKeyword,
     isPrimeOnly,
-    urlDeal,
+    selectedBrands,
     minRating,
     minPrice,
     maxPrice,
+    urlDeal,
     sortBy,
   ]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      {/* Header Bar */}
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="max-w-[1500px] mx-auto px-4 sm:px-6 py-6 animate-fade-in text-xs">
+      {/* Top Header & Breadcrumbs */}
+      <div className="bg-white dark:bg-[#131926] p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <span className="text-xs text-gray-500">
-            Showing {filteredProducts.length} results
-            {urlKeyword ? ` for "${urlKeyword}"` : ''}
-            {selectedCategory !== 'all' ? ` in ${selectedCategory}` : ''}
+          <span className="text-gray-500 dark:text-gray-400">
+            Showing <strong className="text-gray-900 dark:text-white">{filteredProducts.length}</strong> results
+            {urlKeyword && <span> for <strong className="text-amazon-orange">&ldquo;{urlKeyword}&rdquo;</strong></span>}
+            {selectedCategory !== 'all' && (
+              <span> in <strong className="text-amazon-navy dark:text-blue-400 capitalize">{selectedCategory.replace('-', ' ')}</strong></span>
+            )}
           </span>
-          <h1 className="text-lg font-bold text-gray-900">
-            {selectedCategory !== 'all'
-              ? initialCategories.find((c) => c.slug === selectedCategory)?.name
-              : urlKeyword
-              ? `Results for "${urlKeyword}"`
-              : 'All Department Products'}
-          </h1>
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-          {/* Mobile Filter Toggle */}
+        {/* Sort & Mobile Filter Toggle */}
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
-            className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border border-gray-300 rounded-md text-xs font-semibold text-gray-800"
+            onClick={() => setIsMobileFilterOpen(true)}
+            className="md:hidden flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md font-bold text-gray-800 dark:text-gray-200"
           >
             <Filter className="w-3.5 h-3.5" />
             <span>Filters</span>
           </button>
 
-          {/* Sort Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500 hidden sm:inline">Sort by:</span>
+            <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">Sort by:</span>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-md text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-amazon-orange cursor-pointer"
+              className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md font-semibold text-gray-900 dark:text-white cursor-pointer"
             >
               <option value="featured">Featured</option>
               <option value="price_asc">Price: Low to High</option>
               <option value="price_desc">Price: High to Low</option>
-              <option value="rating">Avg. Customer Review</option>
+              <option value="rating_desc">Avg. Customer Review</option>
               <option value="newest">Newest Arrivals</option>
             </select>
           </div>
         </div>
       </div>
 
-      {/* Main Layout: Sidebar + Grid */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Left Sidebar */}
-        <div className={`${isMobileFilterOpen ? 'block' : 'hidden'} lg:block w-full lg:w-64 flex-shrink-0`}>
+      {/* Main Content Layout */}
+      <div className="flex items-start gap-6">
+        {/* Desktop Sidebar (Left) */}
+        <div className="w-64 flex-shrink-0 hidden md:block">
           <FacetSidebar
             categories={initialCategories}
             selectedCategory={selectedCategory}
-            onSelectCategory={(slug) => setSelectedCategory(slug)}
+            onSelectCategory={setSelectedCategory}
             selectedBrands={selectedBrands}
             onToggleBrand={handleToggleBrand}
             availableBrands={availableBrands}
@@ -203,10 +197,10 @@ export default function ProductsPage() {
         {/* Product Grid */}
         <div className="flex-1 w-full">
           {filteredProducts.length === 0 ? (
-            <div className="bg-white p-12 rounded-lg shadow-sm border border-gray-200 text-center space-y-4">
+            <div className="bg-white dark:bg-[#131926] p-12 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center space-y-4">
               <span className="text-3xl">🔍</span>
-              <h3 className="text-lg font-bold text-gray-900">No matching products found</h3>
-              <p className="text-xs text-gray-500 max-w-md mx-auto">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">No matching products found</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto">
                 We couldn&apos;t find any items matching your selected filters. Try broadening your criteria or resetting filters.
               </p>
               <button
@@ -226,5 +220,20 @@ export default function ProductsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[60vh] flex flex-col items-center justify-center p-12 space-y-3">
+          <Loader2 className="w-8 h-8 text-amazon-orange animate-spin" />
+          <span className="text-xs text-gray-500 font-semibold">Loading catalog products...</span>
+        </div>
+      }
+    >
+      <ProductsContent />
+    </Suspense>
   );
 }

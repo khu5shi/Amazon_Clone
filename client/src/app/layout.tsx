@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import '../styles/globals.css';
 import { ThemeProvider } from '../context/ThemeContext';
 import { ToastProvider } from '../context/ToastContext';
@@ -11,11 +11,15 @@ import { Footer } from '../components/layout/Footer';
 import { PrivacyBanner } from '../components/layout/PrivacyBanner';
 import { CartDrawerModal } from '../components/cart/CartDrawerModal';
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: 'Online Shopping site in India: Shop Online for Mobiles, Laptops, Fashion & more - Amazon.in',
   description:
     'Amazon Enterprise Platform - A fully functional e-commerce marketplace built with Next.js, Tailwind CSS, TypeScript, Node.js, Express, and MongoDB, compliant with DPDP Act 2023.',
-  viewport: 'width=device-width, initial-scale=1',
 };
 
 export default function RootLayout({
